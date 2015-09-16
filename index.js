@@ -6,6 +6,7 @@ var xmlhttp = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.ns
 let checkerUrl = "https://languagetool.org:8081/";
 
 function handleText(text) {
+	// TODO: add logic to avoid too many API requests (timeout)
 	var oReq = xmlhttp;
 	oReq.addEventListener("load", function(result) {
 		var xml = oReq.responseXML;
