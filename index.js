@@ -14,6 +14,7 @@ function handleText(text) {
 		var startPositions = [];
 		var endPositions = [];
 		var replacements = [];
+		var messages = [];
 		for (var i = 0; i < errors.length; i++) {
 			//console.error("Got match: " + errors[i].getAttribute("offset") + ", len: " + errors[i].getAttribute("errorlength"));
 			var startPos = parseInt(errors[i].getAttribute("offset"));
@@ -21,17 +22,23 @@ function handleText(text) {
 			startPositions.push(startPos);
 			endPositions.push(endPos);
 			replacements.push(errors[i].getAttribute("replacements"));
-			// TODO: use 'msg' attribute
+			messages.push(errors[i].getAttribute("msg"));
 		}
 		gcSvc.errorsFound(startPositions, endPositions, startPositions.length);
 		for (var j = 0; j < errors.length; j++) {
-			// TODO: split at '#'
-			gcSvc.addSuggestionForError(j, replacements[j]);
+			var suggestions = replacements[j].split("#");
+			for (var k = 0; k < suggestions.length; k++) {
+				if (suggestions[k] !== "") {
+					// TODO: avoid duplications
+					gcSvc.addSuggestionForError(j, suggestions[k], messages[j]);
+				}
+			}
 		}
+		//gcSvc.addSuggestionForError(0, "suggestion", "message");
 	});
+
 	oReq.open("POST", checkerUrl, true);
 	oReq.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-	//var data = "language=en&text=" + text;
 	var data = "autodetect=1&text=" + text;
 	oReq.send(data);
 }
