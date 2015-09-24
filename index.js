@@ -1,22 +1,14 @@
 var {Cc, Ci} = require("chrome");
 
 var gcSvc = Cc["@mozilla.org/grammarcheck;1"].getService(Ci.nsIEditorGrammarCheck);
-var xmlhttp = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
-var { setTimeout, clearTimeout } = require("sdk/timers");
-
-xmlhttp.addEventListener("error", function(result) {
-	console.error("API request ended in error");
-});
-xmlhttp.addEventListener("abort", function(result) {
-	console.error("API request aborted");
-});
-xmlhttp.addEventListener("loadend", function(result) {
-	handleResponse(result);
-});
+var currentText;
 
 let checkerUrl = "https://languagetool.org:8081/";
 
-function handleResponse(text) {
+function handleResponse(result, textAtRequestTime, xmlhttp) {
+	if (currentText != textAtRequestTime) {
+		return;
+	}
 	var xml = xmlhttp.responseXML;
 	var errors = xml.getElementsByTagName("error");
 	var startPositions = [];
@@ -35,6 +27,10 @@ function handleResponse(text) {
 	gcSvc.errorsFound(startPositions, endPositions, startPositions.length);
 	for (var j = 0; j < errors.length; j++) {
 		var suggestions = replacements[j].split("#");
+		if (suggestions.length === 0 || (suggestions.length === 1 && suggestions[0] === '')) {
+			// TODO: should not just be an empty text:
+			gcSvc.addSuggestionForError(j, "", messages[j]);
+		}
 		for (var k = 0; k < suggestions.length; k++) {
 			if (suggestions[k] !== "") {
 				gcSvc.addSuggestionForError(j, suggestions[k], messages[j]);
@@ -43,18 +39,23 @@ function handleResponse(text) {
 	}
 }
 
-function sendRequest(text) {
-	//console.error("TEXT: " + text);
+function sendRequest(text) {	
+	currentText = text;
+	
+	var xmlhttp = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+	// TODO: error handling does not seem to work, e.g. when server returns "too many requests" error:
+	xmlhttp.addEventListener("error", function(result) {
+		console.error("API request ended in error");
+	});
+	xmlhttp.addEventListener("abort", function(result) {
+		console.error("API request aborted");
+	});
+	xmlhttp.addEventListener("loadend", function(result) {		
+		handleResponse(result, text, xmlhttp);
+	});
+	
+	console.error("TEXT: " + text);
 	// TODO: add logic to avoid too many API requests (timeout)
-
-	/*setTimeout(function() {
-		var sp = [0, 15];
-		var ep = [5, 17];
-		gcSvc.errorsFound(sp, ep, sp.length);
-		gcSvc.addSuggestionForError(0, "bsuggestion 1", "message 1");
-		gcSvc.addSuggestionForError(1, "bsuggestion 2", "message 2");
-		gcSvc.addSuggestionForError(1, "bsuggestion 3", "message 2");
-	}, 500);*/
 
 	xmlhttp.open("POST", checkerUrl, true);
 	xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
