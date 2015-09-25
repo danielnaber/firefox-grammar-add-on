@@ -28,8 +28,7 @@ function handleResponse(result, textAtRequestTime, xmlhttp) {
 	for (var j = 0; j < errors.length; j++) {
 		var suggestions = replacements[j].split("#");
 		if (suggestions.length === 0 || (suggestions.length === 1 && suggestions[0] === '')) {
-			// TODO: should not just be an empty text:
-			gcSvc.addSuggestionForError(j, "", messages[j]);
+			gcSvc.addSuggestionForError(j, "", messages[j]);  // shows "No grammar Suggestions"
 		}
 		for (var k = 0; k < suggestions.length; k++) {
 			if (suggestions[k] !== "") {
@@ -54,7 +53,7 @@ function sendRequest(text) {
 		handleResponse(result, text, xmlhttp);
 	});
 	
-	console.error("TEXT: " + text);
+	//console.error("TEXT: " + text);
 	// TODO: add logic to avoid too many API requests (timeout)
 
 	xmlhttp.open("POST", checkerUrl, true);
